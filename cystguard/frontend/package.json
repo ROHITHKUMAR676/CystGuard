@@ -1,0 +1,7 @@
+﻿{
+  "name": "cystguard-frontend",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": { "typecheck": "tsc --noEmit", "build": "tsc --noEmit" },
+  "devDependencies": { "typescript": "^5.0.0" }
+}
