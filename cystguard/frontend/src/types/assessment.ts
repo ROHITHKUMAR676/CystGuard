@@ -1,2 +1,8 @@
-﻿// Placeholder only; implementation will follow docs/api-contract.md.
-export {};
+export type PredictionStatus = 'SUCCESS' | 'FAILED';
+export type InputQualityStatus = 'ACCEPTABLE' | 'NOT_EVALUATED';
+export interface AIResult { id: string; mri_study_id: string; model_id: string; model_version: string; architecture?: string | null; risk_class: string | null; raw_score: number | null; threshold: number | null; prediction_status: PredictionStatus; input_quality_status: InputQualityStatus; fallback_used: boolean; error_message: string | null; created_at: string; clinical_context?: Record<string, unknown> | null; guideline?: Record<string, unknown> | null; trust?: Record<string, unknown> | null; explanation?: Explanation }
+export interface Explanation { summary: string; ai_explanation: string; clinical_explanation: string; trust_explanation: string; concordance_explanation: string; longitudinal_explanation: string; missing_information: string[]; review_reasons: string[]; provider: string; model: string | null; version: string; generated_at: string; status: 'GENERATED' | 'FALLBACK'; service_message?: string | null }
+export interface GuidelineAssessment { status: 'AVAILABLE' | 'UNKNOWN' | 'INCOMPLETE' | 'NOT_APPLICABLE'; classification?: string | null; hrs?: Record<string, 'PRESENT' | 'ABSENT' | 'UNKNOWN'>; wf?: Record<string, 'PRESENT' | 'ABSENT' | 'UNKNOWN'> }
+export interface TrustAssessment { status: 'AVAILABLE' | 'UNKNOWN'; method?: string | null; reliability?: string | null; review_required?: boolean; calibration?: string | null }
+export interface ConcordanceAssessment { status: 'CONCORDANT' | 'CONCORDANT_HIGH' | 'CONCORDANT_LOWER' | 'DISCORDANT' | 'REVIEW' | 'INDETERMINATE' | 'UNCERTAIN' | 'NOT_EVALUABLE' | 'UNKNOWN'; reason_codes?: string[] }
+export interface ClinicianReview { status: string; note?: string | null; author_user_id?: number; created_at?: string }

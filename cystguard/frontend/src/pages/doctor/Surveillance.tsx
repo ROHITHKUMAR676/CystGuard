@@ -1,2 +1,5 @@
-﻿// Placeholder only; implementation will follow docs/api-contract.md.
-export {};
+import type { SurveillancePlan } from '../../types/patient.js';
+import { escapeHtml } from '../../utils/html.js';
+export function DoctorSurveillance(props: { patientId: number; plans: SurveillancePlan[] }): string {
+  return `<header class="page-head"><div><p class="eyebrow">FOLLOW-UP</p><h1>Surveillance</h1><p class="muted">Plans are clinician-entered and stored for the selected patient.</p></div></header><section class="card"><h2>Create follow-up plan</h2><form id="followup-form"><label>Target date<input name="date" type="date" required></label><label>Reason<input name="reason" maxlength="500" required></label><button class="button primary">Save plan</button></form></section><section class="card"><h2>Recorded plans</h2>${props.plans.length ? props.plans.map((plan,index) => `<div class="patient-row"><div class="grow"><b>${escapeHtml(plan.reason)}</b><small>${escapeHtml(plan.target_follow_up_date)} · ${escapeHtml(plan.status)}</small></div><span class="pill blue">${escapeHtml(plan.status)}</span>${plan.status !== 'COMPLETED' ? `<button class="text-button" data-complete="${index}">Mark completed</button>` : ''}</div>`).join('') : '<div class="empty">No surveillance plan is stored.</div>'}</section>`;
+}

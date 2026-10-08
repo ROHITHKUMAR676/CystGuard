@@ -1,0 +1,2 @@
+TRUST_ENGINE_NAME = "CystGuard Trust Engine"
+TRUST_ENGINE_VERSION = "1.0.0"

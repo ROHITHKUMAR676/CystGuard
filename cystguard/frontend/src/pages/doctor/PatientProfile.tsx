@@ -1,2 +1,7 @@
-﻿// Placeholder only; implementation will follow docs/api-contract.md.
-export {};
+import type { CareProfile, PatientIdentity } from '../../types/patient.js';
+import { RiskCard } from '../../components/RiskCard.js';
+import { escapeHtml } from '../../utils/html.js';
+export function DoctorPatientProfile(props: { patient: PatientIdentity; profile: CareProfile }): string {
+  const { patient, profile } = props;
+  return `<header class="page-head"><div><p class="eyebrow">CONNECTED PATIENT</p><h1>${escapeHtml(patient.display_name || patient.email)}</h1><p class="muted">Patient ID ${patient.id} · ${escapeHtml(patient.email)}</p></div><span class="pill green">Access approved</span></header><div class="grid two"><section class="card"><h2>Latest MRI</h2>${profile.latest_mri ? `<p>${escapeHtml(profile.latest_mri.study_date || 'Study date not recorded')} · ${escapeHtml(profile.latest_mri.status)}</p>` : '<div class="empty">No MRI record is stored.</div>'}</section><section class="card"><h2>Latest model assessment</h2>${profile.latest_assessment ? RiskCard(profile.latest_assessment) : '<div class="empty">No assessment is stored.</div>'}</section><section class="card"><h2>Guideline assessment</h2><p>Not persisted for this assessment.</p></section><section class="card"><h2>Trust and concordance</h2><p>Not persisted for this assessment.</p></section><section class="card"><h2>Upcoming surveillance</h2><p>${escapeHtml(String(profile.surveillance.status || 'Unknown'))}</p></section><section class="card"><h2>Recent changes</h2><p>${escapeHtml(String(profile.longitudinal_summary.status || 'Unknown'))}</p></section></div>`;
+}

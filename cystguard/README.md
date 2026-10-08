@@ -4,7 +4,7 @@ AI-assisted pancreatic cyst risk-stratification and clinical decision-support pl
 
 ## Architecture and structure
 
-`ml/` holds baseline and experimental model work; `backend/` is the planned FastAPI backend; `frontend/` is the planned React/TypeScript doctor and patient interfaces. `docs/` holds shared contracts and team workflow; `fixtures/` contains synthetic examples only.
+`ml/` holds baseline and experimental model work; `backend/` contains the FastAPI API and persistence layer; `frontend/` contains the browser application. `docs/` holds shared contracts and team workflow; `fixtures/` contains synthetic examples only.
 
 ## Team ownership
 
@@ -23,7 +23,23 @@ Frontend never guesses backend data. Backend never assumes frontend requirements
 
 ## Local development and testing
 
-Commands will be defined when project configuration is ready. CI is currently a safe placeholder.
+Backend installation, SQLite defaults, Supabase PostgreSQL configuration, migrations, and tests are documented in [docs/database-setup.md](docs/database-setup.md). Alembic is the schema source of truth. PostgreSQL integration tests run only when `TEST_DATABASE_URL` points to a disposable database.
+
+Run the application locally in two terminals after setting `SECRET_KEY` and `DATABASE_URL` in the root `.env` (or leave `DATABASE_URL` blank to use SQLite):
+
+```sh
+cd backend
+python -m pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+```sh
+cd frontend
+npm run dev
+```
+
+The frontend calls `http://127.0.0.1:8000/api/v1` by default. Set `window.CYSTGUARD_API_URL` before loading `frontend/index.html` to use another API origin. Patient tabs work for the authenticated patient before a clinician connection is approved; approval gates clinician access to that patient's records.
 
 ## Security and safety
 

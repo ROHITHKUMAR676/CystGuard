@@ -1,2 +1,6 @@
-﻿// Placeholder only; implementation will follow docs/api-contract.md.
-export {};
+import type { MRIStudySummary } from '../types/patient.js';
+import { displayDate, escapeHtml } from '../utils/html.js';
+export function LongitudinalTimeline(props: { studies: MRIStudySummary[]; orderingComplete?: boolean }): string {
+  if (!props.studies.length) return '<div class="empty">No patient-linked MRI studies are stored.</div>';
+  return `<div class="timeline">${props.studies.map((study, index) => { const result = study.assessments?.[0]; return `<article class="timeline-entry"><span class="timeline-dot"></span><div><small>MRI ${index + 1} · ${escapeHtml(displayDate(study.study_date))}${study.study_date ? '' : ' · Study date not recorded'}</small><h3>${escapeHtml(result?.risk_class || 'Assessment unavailable')}</h3><p>${result?.raw_score == null ? 'Model score not recorded' : `Raw model score ${Number(result.raw_score).toFixed(3)} · not a probability`}</p>${(study.measurements || []).map((measurement) => `<p>${escapeHtml(measurement.feature)} · ${measurement.value == null ? escapeHtml(measurement.finding_status || 'Unknown') : `${escapeHtml(measurement.value)} ${escapeHtml(measurement.unit || '')}`} · ${escapeHtml(measurement.source)}</p>`).join('')}</div></article>`; }).join('')}</div>${props.orderingComplete === false ? '<p class="muted">Some study dates are missing; complete chronological comparison is unavailable.</p>' : ''}`;
+}

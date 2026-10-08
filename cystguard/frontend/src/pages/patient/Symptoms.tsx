@@ -1,2 +1,5 @@
-﻿// Placeholder only; implementation will follow docs/api-contract.md.
-export {};
+import type { Symptom } from '../../types/patient.js';
+import { escapeHtml } from '../../utils/html.js';
+export function PatientSymptoms(props: { symptoms: Symptom[] }): string {
+  return `<header class="page-head"><div><p class="eyebrow">PATIENT-REPORTED</p><h1>Symptoms</h1><p class="muted">Record what you are experiencing. Entries are not diagnoses.</p></div></header><section class="card"><h2>Record a symptom</h2><form id="symptom-form"><label>Symptom<input name="name" required maxlength="64"></label><label>Severity<select name="severity"><option>Mild</option><option>Moderate</option><option>Severe</option></select></label><label>Date<input name="date" type="date" required></label><label>Optional note<input name="note" maxlength="2000"></label><button class="button primary">Save symptom</button></form></section><section class="card"><h2>Symptom history</h2>${props.symptoms.length ? props.symptoms.map((item)=>`<div class="patient-row"><div class="grow"><b>${escapeHtml(item.symptom_type)}</b><small>${escapeHtml(item.onset_date || item.recorded_at)} · ${item.severity == null ? 'Severity not recorded' : `Severity ${item.severity}/10`}</small><small>${escapeHtml(item.notes || 'No note')} · ${escapeHtml(item.review_status)}</small></div></div>`).join('') : '<div class="empty">No symptoms are stored.</div>'}</section>`;
+}

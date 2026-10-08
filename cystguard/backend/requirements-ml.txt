@@ -1,0 +1,4 @@
+# Optional inference runtime for the official Cyst-X baseline.
+# Install the PyTorch build appropriate for the local CPU/CUDA environment.
+torch>=2.2,<3.0
+monai>=1.3,<2.0

@@ -1,0 +1,5 @@
+# Optional CPU/GPU-compatible runtime for the vendored FoodCNN model.
+# Choose compatible PyTorch/torchvision wheels for the deployment hardware.
+torch>=2.2,<3.0
+torchvision>=0.17,<1.0
+Pillow>=10,<13

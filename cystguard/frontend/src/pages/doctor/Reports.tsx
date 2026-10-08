@@ -1,2 +1,7 @@
-﻿// Placeholder only; implementation will follow docs/api-contract.md.
-export {};
+import type { CareProfile, PatientIdentity } from '../../types/patient.js';
+import { escapeHtml } from '../../utils/html.js';
+export function DoctorReports(props: { patient: PatientIdentity; profile: CareProfile; note?: string }): string {
+  const mri = props.profile.latest_mri;
+  const assessment = props.profile.latest_assessment;
+  return `<header class="page-head"><div><p class="eyebrow">REPORT PREVIEW</p><h1>Clinical report</h1><p class="muted">Review persisted information before printing.</p></div><button class="button primary" data-action="print-report">Print / save</button></header><section class="card"><h2>Patient information</h2><p>${escapeHtml(props.patient.display_name || props.patient.email)} · ID ${props.patient.id}</p><p>${escapeHtml(props.patient.email)}</p></section><section class="card"><h2>MRI summary</h2><p>${escapeHtml(mri?.study_date || 'Not recorded')} · ${escapeHtml(mri?.status || 'No MRI stored')}</p></section><section class="card"><h2>AI evidence</h2><p>${escapeHtml(assessment?.risk_class || 'Not recorded')}</p><p>${assessment?.raw_score == null ? 'Model score unavailable' : `Raw model score ${Number(assessment.raw_score).toFixed(3)}; not a probability`}</p><p>Guideline, trust, and concordance: not persisted.</p></section><section class="card"><h2>Clinician assessment</h2><p>${escapeHtml(props.note || 'Not recorded')}</p></section><p class="fine-print">This preview contains saved data only. It does not generate clinical recommendations.</p>`;
+}

@@ -1,2 +1,5 @@
-﻿// Placeholder only; implementation will follow docs/api-contract.md.
-export {};
+export type MedicationStatus = 'UNKNOWN' | 'ACTIVE' | 'HISTORICAL' | 'ENDED' | 'DISCONTINUED';
+export type VerificationStatus = 'UNVERIFIED' | 'VERIFIED';
+export interface MedicationField { value: string | number | boolean | null; normalized_value?: string | number | boolean | null; status?: string; extraction_confidence?: number | null; provenance?: { source_document_id: string; source_type: string; page: number | null; source_text: string | null; extraction_method: string } | null }
+export interface MedicationConflict { id: string; medication_record_ids: [string, string]; conflicting_fields: Record<string, [unknown, unknown]>; status: 'CONFLICT_REQUIRES_REVIEW' | 'REVIEWED'; resolution_record_id: string | null; review_note: string | null }
+export interface MedicationOCRResult { document: { id: string; original_filename: string; extraction_status: string; verification_status: VerificationStatus }; medications: Array<{ id: string; extracted_fields: Record<string, MedicationField>; verified_fields: Record<string, MedicationField> | null; verification_status: VerificationStatus; medication_status: MedicationStatus; conflicts: MedicationConflict[] }> }

@@ -1,2 +1,3 @@
-﻿// Placeholder only; implementation will follow docs/api-contract.md.
-export {};
+export function MealAnalyzer(): string {
+  return `<section class="card meal-analyzer"><h2>Analyze a meal photo</h2><p class="muted">FoodCNN estimates whole-image calories, protein, carbohydrates, fat, and portion weight. It does not identify individual foods or provide a calibrated confidence score.</p><form id="food-analyze-form"><label>Meal photo<input type="file" name="upload" accept="image/jpeg,image/png,image/webp" required></label><label>Meal description <span class="muted">(optional now; required to confirm)</span><input name="description" maxlength="2000" placeholder="Add a short meal description"></label><p class="muted">The estimate is not stored as confirmed until you review and confirm or mark it uncertain.</p><button class="button primary" type="submit">Estimate nutrition</button><p id="food-analysis-error" class="error hidden" role="alert"></p></form></section>`;
+}

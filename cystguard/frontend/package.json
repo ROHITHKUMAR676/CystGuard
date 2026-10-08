@@ -2,6 +2,11 @@
   "name": "cystguard-frontend",
   "version": "0.0.0",
   "private": true,
-  "scripts": { "typecheck": "tsc --noEmit", "build": "tsc --noEmit" },
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build && python -m http.server 5173",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc && node --check dist/main.js && node --check dist/services/api.js && node --check dist/components/ui.js && node --check dist/data/workflowSeeds.js"
+  },
   "devDependencies": { "typescript": "^5.0.0" }
 }

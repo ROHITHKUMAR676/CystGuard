@@ -1,2 +1,13 @@
-﻿// Placeholder only; implementation will follow docs/api-contract.md.
-export {};
+import type { MealEntry, NutritionSummary } from '../../types/meal.js';
+import { MealAnalyzer } from '../../components/MealAnalyzer.js';
+import { MealEntry as MealEntryCard } from '../../components/MealEntry.js';
+import { escapeHtml } from '../../utils/html.js';
+
+export function PatientMeals(props: { meals: MealEntry[]; summary?: NutritionSummary | null }): string {
+  const alerts = props.summary?.alerts || [];
+  const alertMarkup = alerts.map(alert => `<div class="nutrition-alert nutrition-alert-${escapeHtml(alert.level.toLowerCase())}"><b>${escapeHtml(alert.title)}</b><p>${escapeHtml(alert.summary)}</p></div>`).join('');
+  const loggedAverage = props.summary?.average_per_logged_day;
+  const target = props.summary?.recorded_target;
+  const metrics = loggedAverage ? `<div class="nutrition-metrics"><div><small>Average energy per logged day</small><b>~${Math.round(loggedAverage.calories_kcal)} kcal</b></div><div><small>Average protein per logged day</small><b>~${Math.round(loggedAverage.protein_g)} g</b></div><div><small>Recorded clinician target</small><b>${target?.daily_kcal ? `${Math.round(target.daily_kcal)} kcal/day` : 'None recorded'}</b></div><div><small>Latest recorded weight</small><b>${props.summary?.weight.latest_kg ? `${props.summary.weight.latest_kg} kg` : 'Not recorded'}</b></div></div><p class="muted">${escapeHtml(props.summary?.average_basis || '')}. Meal estimates are not a complete-day intake measure.</p>` : `<div class="empty">No nutrition estimates are available yet. A daily target will appear only if your clinician records one.</div>`;
+  return `<header class="page-head"><div><p class="eyebrow">MEAL LOGGING</p><h1>Meals</h1><p class="muted">Review image estimates, add the foods you recognize, and confirm or correct each meal.</p></div></header>${MealAnalyzer()}<section class="card"><h2>Record a description without a photo</h2><form id="meal-form"><label>Description<input name="name" required maxlength="2000" placeholder="Describe your meal"></label><label class="check"><input name="confirm" type="checkbox"> I confirm this description</label><button class="button">Save meal description</button></form></section>${alertMarkup}<section class="card"><h2>Nutrition overview</h2>${metrics}${props.summary?.target_notice ? `<p class="nutrition-target-notice">${escapeHtml(props.summary.target_notice)}</p>` : ''}</section><section class="card"><h2>Meal history</h2>${props.meals.length ? props.meals.map(meal => MealEntryCard(meal)).join('') : '<div class="empty">No meals are stored. Analyze a photo or record a meal description.</div>'}</section>`;
+}

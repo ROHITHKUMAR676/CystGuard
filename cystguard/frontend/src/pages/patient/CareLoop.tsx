@@ -1,2 +1,4 @@
-﻿// Placeholder only; implementation will follow docs/api-contract.md.
-export {};
+import { escapeHtml } from '../../utils/html.js';
+export function PatientCareLoop(props: { events: Array<{ event_type?: string; summary?: string; occurred_at?: string }> }): string {
+  return `<header class="page-head"><div><p class="eyebrow">YOUR CARE JOURNEY</p><h1>CareLoop</h1><p class="muted">A chronological view of care actions recorded by you and your care team.</p></div></header><section class="card"><h2>Recorded events</h2>${props.events.length ? props.events.map((event)=>`<article class="timeline-entry"><span class="timeline-dot"></span><div><small>${escapeHtml(event.occurred_at || 'Time not recorded')}</small><h3>${escapeHtml(event.event_type || 'Care update')}</h3><p>${escapeHtml(event.summary || 'Recorded')}</p></div></article>`).join('') : '<div class="empty">No CareLoop events are stored yet.</div>'}</section>`;
+}

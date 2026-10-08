@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 __pycache__/
+.pytest_cache/
 *.py[cod]
 node_modules/
 frontend/dist/
@@ -27,3 +28,4 @@ tmp/
 temp/
 *.tmp
 *.log
+*.db

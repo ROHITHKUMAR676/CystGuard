@@ -1,2 +1,4 @@
-﻿// Placeholder only; implementation will follow docs/api-contract.md.
-export {};
+import { escapeHtml } from '../../utils/html.js';
+export function PatientVisitPreparation(props: { questions: string[]; latestMRI?: string | null; symptomCount: number; medicationCount: number; mealCount: number; followupCount: number }): string {
+  return `<header class="page-head"><div><p class="eyebrow">NEXT APPOINTMENT</p><h1>Visit preparation</h1><p class="muted">Review your saved information and add questions for your care team.</p></div></header><section class="card"><h2>Your recorded information</h2><p>Latest MRI: ${escapeHtml(props.latestMRI || 'Not recorded')}</p><p>Symptoms: ${props.symptomCount} · Medications: ${props.medicationCount} · Meals: ${props.mealCount} · Follow-up plans: ${props.followupCount}</p></section><section class="card"><h2>Questions for your care team</h2>${props.questions.map((question)=>`<p>${escapeHtml(question)}</p>`).join('') || '<div class="empty">No questions are stored.</div>'}<form id="question-form"><label>Add a question<input name="question" required maxlength="2000"></label><button class="button primary">Save question</button></form></section>`;
+}
