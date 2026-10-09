@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     max_meal_upload_size_mb: int = 12
     max_mri_upload_size_mb: int = 512
     max_document_upload_size_mb: int = 25
+    tesseract_cmd: str | None = None
     sarvam_api_key: str = ""
     sarvam_api_url: str = "https://api.sarvam.ai/v1/chat/completions"
     sarvam_model: str = "sarvam-105b"

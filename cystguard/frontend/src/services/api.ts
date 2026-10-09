@@ -41,6 +41,35 @@ export async function apiRequest<T = unknown>(path: string, options: { method?: 
   }
   return payload as T;
 }
+export async function apiUpload<T = unknown>(path: string, body: FormData, onProgress?: (percent: number, uploadComplete: boolean) => void): Promise<T> {
+  const token = getAccessToken();
+  if (!token) throw new ApiError(401, 'Sign in to continue.');
+  return new Promise<T>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', `${API_BASE}${path}`);
+    request.setRequestHeader('Authorization', `Bearer ${token}`);
+    request.upload.onprogress = event => {
+      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 65), false);
+    };
+    request.upload.onload = () => onProgress?.(65, true);
+    request.onerror = () => reject(new ApiError(0, 'Cannot reach CystGuard services. Check that the API is running.'));
+    request.onabort = () => reject(new ApiError(0, 'The upload was cancelled.'));
+    request.onload = () => {
+      const contentType = request.getResponseHeader('content-type') || '';
+      let payload: unknown = request.responseText;
+      if (contentType.includes('application/json')) {
+        try { payload = JSON.parse(request.responseText); }
+        catch { return reject(new ApiError(request.status, 'The server returned an invalid response.')); }
+      }
+      if (request.status < 200 || request.status >= 300) {
+        return reject(new ApiError(request.status, request.status === 404 ? `Not Found: POST ${path}` : responseError(payload, request.status), payload));
+      }
+      onProgress?.(100, true);
+      resolve(payload as T);
+    };
+    request.send(body);
+  });
+}
 export async function authenticate(input: RegisterRequest | LoginRequest, register = false): Promise<CurrentUser> {
   if (register) await apiRequest<CurrentUser>('/auth/register', { method: 'POST', auth: false, body: input });
   const session = await apiRequest<TokenResponse>('/auth/login', { method: 'POST', auth: false, body: input });

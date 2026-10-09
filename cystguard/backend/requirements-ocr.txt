@@ -1,5 +1,3 @@
-# Optional local extraction dependencies. Install the Tesseract executable separately.
-pypdf>=5.0,<7.0
-PyMuPDF>=1.24,<2.0
-Pillow>=10.0,<13.0
-pytesseract>=0.3.13,<1.0
+# Python OCR dependencies are installed with requirements.txt.
+# Scanned PDF and image OCR also require the local Tesseract executable.
+# Set TESSERACT_CMD when the executable is not available on PATH.
