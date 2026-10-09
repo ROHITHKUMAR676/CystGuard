@@ -23,6 +23,7 @@ import { PatientSymptoms } from './pages/patient/Symptoms.js';
 import { PatientMedications } from './pages/patient/Medications.js';
 import { PatientMeals } from './pages/patient/Meals.js';
 import { PatientTimeline } from './pages/patient/Timeline.js';
+import { PatientNutrition } from './pages/patient/Nutrition.js';
 import { PatientVisitPreparation } from './pages/patient/VisitPreparation.js';
 import { clinicianSeed, patientSeeds, resultForUpload, seededAccessRequests, estimateMeal } from './data/workflowSeeds.js';
 import { api, apiRequest, apiUpload, authenticate, clearSession, getAccessToken, validateMRIFile } from './services/api.js';
@@ -43,6 +44,7 @@ const initial = {
   addPatientOpen: false,
   doctorAccessCode: clinicianSeed.accessCode,
   followups: [{ date: '2026-12-14', reason: 'MRI follow-up and care review', status: 'Upcoming' }],
+  surveillancePlans: [],
   notes: '', reviewed: false, assessment: '', uploadName: '', uploadStatus: '',
   analysis: { status: 'idle', progress: 0, stage: 0 },
   uploadFlow: null,
@@ -152,6 +154,7 @@ async function refreshBackendData() {
       state.accessRequests = accessRows.map(accessRequestFromApi);
       state.followups = plans.map(plan => ({ id: plan.id, date: plan.target_follow_up_date, reason: plan.reason,
         status: plan.status === 'COMPLETED' ? 'Completed' : plan.status, backendStatus: plan.status }));
+      state.surveillancePlans = plans;
       state.medicationRecords = meds;
       state.notesFromApi = notes;
       state.questions = notes.map(note=>note.body);
@@ -204,6 +207,7 @@ async function loadSelectedDoctorPatient() {
     state.symptoms = patient.symptoms;
     state.meals = patient.meals;
     state.followups = plans.map(plan=>({id:plan.id,date:plan.target_follow_up_date,reason:plan.reason,status:plan.status,backendStatus:plan.status}));
+    state.surveillancePlans = plans;
     state.medicationRecords = medications;
     state.timelineFromApi = timeline;
     state.messages = messages.map(item => ({id:item.id,from:item.sender_user_id===state.user.id?'patient':'doctor',text:item.body,time:item.created_at?new Date(item.created_at).toLocaleString():''}));
@@ -218,10 +222,26 @@ async function finishAuthentication(user) {
   state.role = user.role === 'DOCTOR' ? 'doctor' : 'patient';
   state.doctorAccessCode = user.doctor_access_code || '';
   state.patient = apiPatient(user);
+  state.patientDirectory = [];
+  state.accessRequests = [];
+  state.activeDoctors = [];
   state.symptoms = [];
   state.meals = [];
   state.messages = [];
   state.followups = [];
+  state.surveillancePlans = [];
+  state.medicationRecords = [];
+  state.notesFromApi = [];
+  state.careEvents = [];
+  state.timelineFromApi = null;
+  state.nutritionSummary = null;
+  state.latestProfile = null;
+  state.latestStudy = null;
+  state.latestMealUploadId = null;
+  state.latestMedicationUpload = null;
+  state.selectedPatientReports = null;
+  state.reportRecords = [];
+  state.selectedPatientId = null;
   state.analysis = { status: 'idle', progress: 0, stage: 0 };
   state.questions = [];
   state.sessionRestoring = false;
@@ -363,7 +383,7 @@ function backendAccessRequests(){
 }
 function backendProfile(){const person=selectedPatient(),profile=state.latestProfile;if(!person||!profile||!patientHasApprovedAccess(person.id))return `${header('Patient profile','Clinical information is available after access approval.')}${card('Access required','<div class="empty">Select a connected patient to open their information.</div>')}`;return DoctorPatientProfile({patient:{id:person.id,email:person.email,display_name:person.name},profile});}
 function backendAssessment(){if(state.role==='patient'){const available=Boolean(state.latestProfile?.latest_assessment);return `${header('Assessment','A plain-language view of information saved to your record.')}${card('Imaging review',available?'<p>An MRI model assessment is saved and can be reviewed by your connected clinician.</p><p class="muted">Your care team remains responsible for interpreting imaging and discussing what it means for you.</p>':'<div class="empty">No MRI assessment is recorded.</div>')}`;}const result=state.latestStudy?.assessment||state.latestProfile?.latest_assessment||null;return DoctorAssessmentPage({result,studies:state.timelineFromApi?.studies||[],note:state.notes||''});}
-function backendTimeline(){const timeline=state.timelineFromApi||{studies:[],ordering_complete:false};if(state.role==='patient')return PatientTimeline({studies:timeline.studies||[]});return `${header('Longitudinal MRI','Persisted dates, model output, and sourced measurements.')}${card('MRI history',LongitudinalTimeline(timeline))}`;}
+function backendTimeline(){const timeline=state.timelineFromApi||{studies:[],ordering_complete:false};if(state.role==='patient')return PatientTimeline({studies:timeline.studies||[],orderingComplete:timeline.ordering_complete,events:state.careEvents||[],symptoms:state.symptoms||[],notes:state.notesFromApi||[],medications:state.medicationRecords||[],surveillance:state.surveillancePlans||[],meals:state.meals||[]});return `${header('Longitudinal MRI','Persisted dates, model output, and sourced measurements.')}${card('MRI history',LongitudinalTimeline(timeline))}`;}
 function backendSurveillance(){const patient=state.role==='doctor'?selectedPatient():state.patient;if(state.role==='doctor')return DoctorSurveillance({patientId:Number(patient?.id||0),plans:(state.followups||[]).map(item=>({id:item.id,patient_user_id:Number(patient?.id||0),created_by_user_id:Number(state.user?.id||0),target_follow_up_date:item.date,interval:null,interval_unit:null,reason:item.reason,status:item.status,notes:null,last_reviewed_at:null,next_review_date:null,created_at:''}))});return `${header('Surveillance','Plans are created by clinicians and saved to your record.')}${card('Saved plans',state.followups.length?state.followups.map(item=>`<div class="patient-row"><div class="grow"><b>${esc(item.reason)}</b><small>${esc(item.date)} ? ${esc(item.status)}</small></div>${pill(item.status,'blue')}</div>`).join(''):'<div class="empty">No surveillance plan has been recorded.</div>')}`;}
 function backendSymptoms(){return state.role==='patient'?PatientSymptoms({symptoms:state.symptoms||[]}):`${header('Symptoms','Patient-reported records for the selected patient.')}${card('Symptom history',(state.symptoms||[]).map(item=>`<div class="patient-row"><div class="grow"><b>${esc(item.symptom_type||item.name)}</b><small>${esc(item.onset_date||item.date||'Date not recorded')} ? ${esc(item.review_status||item.reviewStatus||'Pending review')}</small></div></div>`).join('')||'<div class="empty">No symptoms are stored.</div>')}`;}
 function backendMedications(){const records=state.medicationRecords||[];if(state.role==='patient')return PatientMedications({records,flow:state.uploadFlow?.kind==='medication'?state.uploadFlow:null,latestUpload:state.latestMedicationUpload});return `${header('Medications','Medication candidates and verification state from saved OCR records.')}${card('Medication records',records.length?records.map(item=>MedicationCard(item,'doctor')).join(''):'<div class="empty">No medication records are stored.</div>')}${records.filter(item=>item.verification_status==='UNVERIFIED').map(item=>MedicationVerification(item)).join('')}<p class="muted">Extracted medication details remain unverified until a clinician checks the source.</p>`;}
@@ -373,9 +393,9 @@ function nutritionSummaryPanel(summary){const average=summary?.average_per_logge
 function nutritionObservationForm(){return `<section class="card"><h2>Record todayâ€™s nutrition context</h2><form id="nutrition-observation-form"><div class="nutrition-edit-grid"><label>Weight (kg), if available<input name="weight_kg" type="number" min="1" max="500" step="0.1"></label><label>Height (cm), if available<input name="height_cm" type="number" min="1" max="250" step="0.1"></label><label>Appetite<select name="appetite"><option value="UNKNOWN">Not recorded</option><option value="GOOD">Good</option><option value="FAIR">Fair</option><option value="POOR">Poor</option></select></label></div><fieldset class="food-tags"><legend>Patient-reported symptoms today</legend>${[['DIARRHEA','Diarrhea'],['NAUSEA','Nausea'],['VOMITING','Vomiting'],['POOR_APPETITE','Poor appetite'],['EARLY_SATIETY','Early fullness'],['CONSTIPATION','Constipation'],['ABDOMINAL_PAIN','Abdominal pain'],['DIFFICULTY_SWALLOWING','Difficulty swallowing'],['TASTE_CHANGE','Taste change']].map(([value,label])=>`<label class="check"><input type="checkbox" name="reported_symptoms" value="${value}"> ${label}</label>`).join('')}</fieldset><label class="check"><input type="checkbox" name="intake_interfered"> Symptoms interfered with my intake</label><label class="check"><input type="checkbox" name="intake_day_complete"> I finished logging everything I ate today</label><p class="muted">Only mark the day complete when your meal log for that day is finished. Your entries are patient-reported.</p><button class="button primary">Save nutrition context</button></form></section>`;}
 function nutritionTargetForm(summary){const target=summary?.recorded_target||{},context=summary?.documented_context||{};return `<section class="card"><h2>Clinician-recorded nutrition context</h2><p class="muted">Targets and condition context are entered by the care team. No target is calculated automatically.</p><form id="nutrition-profile-form"><div class="nutrition-edit-grid"><label>Daily energy target (kcal)<input name="target_daily_kcal" type="number" min="1" max="10000" step="1" value="${target.daily_kcal||''}"></label><label>Daily protein target (g)<input name="target_daily_protein_g" type="number" min="1" max="1000" step="1" value="${target.daily_protein_g||''}"></label></div><label class="check"><input name="documented_pei_pert" type="checkbox" ${context.pei_pert?'checked':''}> PEI/PERT context documented</label><label class="check"><input name="documented_diabetes" type="checkbox" ${context.diabetes?'checked':''}> Diabetes/glucose-management context documented</label><button class="button primary">Save clinical context</button></form></section>`;}
 function backendMeals(){const entries=state.meals||[],latest=entries.find(item=>item.id===state.latestMealUploadId)||null;return state.role==='patient'?PatientMeals({meals:entries,summary:state.nutritionSummary,uploadFlow:state.uploadFlow?.kind==='meal'?state.uploadFlow:null,latestMeal:latest}):`${header('Meals','Meal estimates, patient confirmations, context flags, and provenance for the selected patient.')}${!state.selectedPatientId?'<div class="empty">Select an approved patient to review meal entries.</div>':card('Patient meal history',entries.map(item=>MealEntry(item,false)).join('')||'<div class="empty">No meal entries are stored.</div>')}`;}
-function backendNutrition(){const summary=state.nutritionSummary,person=state.role==='doctor'?selectedPatient():state.patient;if(state.role==='doctor'&&!patientHasApprovedAccess(person?.id))return `${header('Nutrition','Nutrition records require an active patient access grant.')}${card('Access required','<div class="empty">Select an approved patient before reviewing nutrition information.</div>')}`;return `${header('Nutrition monitoring',state.role==='doctor'?`Patient-reported intake and context for ${esc(person?.name||'the selected patient')}.`:'Review your recorded meal estimates, weight, appetite, and symptom context.')}${nutritionAlerts(summary)}${card('Estimated intake trend',nutritionChart(summary))}${card('Nutrition summary',nutritionSummaryPanel(summary))}${state.role==='patient'?nutritionObservationForm():nutritionTargetForm(summary)}${card('Recent meals',NutritionTimeline(state.meals||[]))}<p class="fine-print">${esc(summary?.alert_disclaimer||'Estimates support monitoring and do not provide diagnoses, treatment instructions, or medication changes.')}</p>`;}
+function backendNutrition(){const summary=state.nutritionSummary,person=state.role==='doctor'?selectedPatient():state.patient;if(state.role==='doctor'&&!patientHasApprovedAccess(person?.id))return `${header('Nutrition','Nutrition records require an active patient access grant.')}${card('Access required','<div class="empty">Select an approved patient before reviewing nutrition information.</div>')}`;if(state.role==='patient')return PatientNutrition({summary,meals:state.meals||[],observationForm:nutritionObservationForm()});return `${header('Nutrition monitoring',`Patient-reported intake and context for ${esc(person?.name||'the selected patient')}.`)}${nutritionAlerts(summary)}${card('Estimated intake trend',nutritionChart(summary))}${card('Nutrition summary',nutritionSummaryPanel(summary))}${nutritionTargetForm(summary)}${card('Recent meals',NutritionTimeline(state.meals||[]))}<p class="fine-print">${esc(summary?.alert_disclaimer||'Estimates support monitoring and do not provide diagnoses, treatment instructions, or medication changes.')}</p>`;}
 function backendMessages(){const patient=state.role==='patient'?state.patient:selectedPatient();return `${header('Messages','Messages are visible to the patient and clinicians with an active connection.')}${state.role==='patient'&&!patientHasApprovedAccess(patient.id)?card('Care team connection required','<div class="empty">You can use your other care tabs now. A clinician must approve your connection before secure care-team messaging is enabled.</div>'):''}${card('Care-team conversation',`${state.messages.map(message=>`<div class="message ${message.from==='patient'?'mine':''}"><p>${esc(message.text)}</p><small>${esc(message.time)}</small></div>`).join('')||'<div class="empty">No messages are stored.</div>'}${state.role==='doctor'||patientHasApprovedAccess(patient.id)?`<form id="message-form" class="form-row"><label>Message<input name="text" required maxlength="10000" placeholder="Write a care-team message"></label><button class="button primary">Send</button><p id="api-error" class="error hidden"></p></form>`:''}<p class="muted">Do not use messages for emergencies.</p>`)}`;}
-function backendCareLoop(){return PatientCareLoop({events:state.careEvents||[]});}
+function backendCareLoop(){return PatientCareLoop({events:state.careEvents||[],symptoms:state.symptoms||[],medications:state.medicationRecords||[],surveillance:state.surveillancePlans||[],meals:state.meals||[],notes:state.notesFromApi||[],hasAssessment:Boolean(state.latestProfile?.latest_assessment)});}
 function backendVisitPreparation(){const profile=state.latestProfile||{};return PatientVisitPreparation({questions:state.questions||[],latestMRI:profile.latest_mri?.study_date,symptomCount:state.symptoms.length,medicationCount:state.medicationRecords?.length||0,mealCount:state.meals.length,followupCount:state.followups.length});}
 function backendReports(){const profile=state.latestProfile||{},records=state.reportRecords||[];if(state.role==='doctor'){const person=selectedPatient(),preview=DoctorReports({patient:{id:Number(person?.id||0),email:person?.email||'',display_name:person?.name||''},profile,note:state.notes||''}),patientReports=state.selectedPatientReports||[];const docs=patientReports.map(record=>{const fields=record.verified_fields||Object.fromEntries(Object.entries(record.fields||{}).map(([name,field])=>[name,field?.value??'']));const rows=Object.entries(record.fields||{}).map(([name,field])=>`<label>${esc(name.replace(/_/g,' '))}<input name="${esc(name)}" value="${esc(fields[name]??'')}" ${record.document.verification_status==='VERIFIED'?'readonly':''}></label>`).join('');return card(`Patient report Â· ${esc(record.document.original_filename)}`,`<p>${esc(record.document.extraction_status)} Â· ${esc(record.document.verification_status)}</p><form id="report-verify-form" class="report-verify-form" data-report-id="${esc(record.id)}"><div class="form-grid">${rows}</div><label>Clinician note<textarea name="doctor_note" maxlength="2000" ${record.document.verification_status==='VERIFIED'?'readonly':''}>${esc(record.doctor_note||'')}</textarea></label>${record.document.verification_status!=='VERIFIED'?'<button class="button primary">Verify reviewed fields</button>':''}<p class="fine-print">OCR values are candidate information. Review against the source before verification.</p></form>`);}).join('')||card('Patient reports','<div class="empty">No reports have been uploaded by this patient.</div>');return `${preview}${docs}`;}const upload=card('Upload medical report',`<form id="report-upload-form" class="upload-form"><label>Report PDF or image<input type="file" name="upload" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp" required ${state.uploadFlow?.kind==='report'&&['uploading','processing'].includes(state.uploadFlow.status)?'disabled':''}></label><button class="button primary" ${state.uploadFlow?.kind==='report'&&['uploading','processing'].includes(state.uploadFlow.status)?'disabled':''}>${state.uploadFlow?.kind==='report'&&['uploading','processing'].includes(state.uploadFlow.status)?'Uploading…':'Upload and extract'}</button></form>${UploadProgress(state.uploadFlow?.kind==='report'?state.uploadFlow:null)}`);const docs=records.length?records.map(record=>card(`Medical report · ${esc(record.document.original_filename)}`,`<p>${esc(record.document.extraction_status)} · ${esc(record.document.verification_status)}</p>${Object.entries(record.verified_fields||record.fields||{}).map(([name,field])=>`<p><b>${esc(name.replace(/_/g,' '))}:</b> ${field?.value==null?'Unknown':esc(field.value)}</p>`).join('')}`)).join(''):card('Uploaded reports','<div class="empty">No report documents are stored.</div>');const latest=state.latestReportUpload?.document?card(`Latest OCR result · ${esc(state.latestReportUpload.document.original_filename)}`,`${Object.entries(state.latestReportUpload.fields||{}).map(([name,field])=>`<p><b>${esc(name.replace(/_/g,' '))}:</b> ${esc(field?.value??'Unknown')}</p>`).join('')||'<div class="empty">No report fields were matched. Review the extracted text below.</div>'}<details class="ocr-source"><summary>Review extracted document text</summary><pre>${esc(state.latestReportUpload.document.raw_text||'No text was extracted.')}</pre></details>`):'';return `${header('Reports','Uploaded report OCR remains reviewable candidate information.')}${upload}${latest}${docs}`;}
 function backendPageContent(){if(state.role==='doctor'&&['Patient Profile','MRI Analysis','Assessment','Timeline','Meals','Nutrition','Surveillance','Reports','Messages'].includes(page)&&!patientHasApprovedAccess(state.selectedPatientId))return `${header(page,'Select a connected patient before opening clinical records.')}${card('Patient access required',`<div class="empty">This page is available after you select a patient with an active access grant.</div>${link('Open patients','Patients')}`)}`;switch(page){case 'Dashboard':return state.role==='doctor'?backendDoctorHome():backendPatientDashboard();case 'Patients':return backendPatients();case 'Access Requests':return backendAccessRequests();case 'Care Team Access':return backendAccessRequests();case 'Patient Profile':return backendProfile();case 'MRI Analysis':return mri();case 'Assessment':return backendAssessment();case 'Timeline':return backendTimeline();case 'Surveillance':return backendSurveillance();case 'Reports':return backendReports();case 'CareLoop':return backendCareLoop();case 'Symptoms':return backendSymptoms();case 'Medications':return backendMedications();case 'Meals':return backendMeals();case 'Nutrition':return backendNutrition();case 'Visit Preparation':return backendVisitPreparation();case 'Messages':return backendMessages();default:return state.role==='doctor'?backendDoctorHome():backendPatientDashboard();}}
@@ -419,6 +439,10 @@ function installBackendHandlers() {
     const form=event.target, supported=['role-login-form','auth-register-form','doctor-add-patient-form','access-form','symptom-form','followup-form','question-form','meal-form','food-analyze-form','meal-confirm-form','nutrition-observation-form','nutrition-profile-form','message-form','medication-upload-form','medication-verify-form','medication-conflict-form','report-upload-form','report-verify-form'];
     if(!supported.includes(form.id))return;
     event.preventDefault();event.stopImmediatePropagation();
+    if(form.dataset.submitting==='true')return;
+    form.dataset.submitting='true';
+    const formControls=[...form.querySelectorAll('button')];
+    formControls.forEach(control=>{if(!control.disabled){control.dataset.submitDisabled='true';control.disabled=true;}});
     const data=Object.fromEntries(new FormData(form));
     try {
       if(form.id==='role-login-form'||form.id==='auth-register-form'){
@@ -509,6 +533,7 @@ function installBackendHandlers() {
         await loadSelectedDoctorPatient();render();return;
       }
     } catch(error) { if(state.uploadFlow?.status==='error'&&['food-analyze-form','medication-upload-form','report-upload-form'].includes(form.id))return;showFormError(form.id==='role-login-form'||form.id==='auth-register-form'?'auth-error':form.id==='access-form'?'access-error':form.id==='food-analyze-form'?'food-analysis-error':form.id==='meal-confirm-form'?`meal-error-${form.dataset.mealId}`:'api-error',error); }
+    finally {form.dataset.submitting='false';formControls.forEach(control=>{if(control.dataset.submitDisabled==='true'){control.disabled=false;delete control.dataset.submitDisabled;}});}
   },true);
 
   document.addEventListener('click', async event => {
@@ -517,7 +542,7 @@ function installBackendHandlers() {
     try {
       if(target.dataset.action==='logout'){
         clearSession();state.user=null;state.backendConnected=false;state.role=null;state.sessionRestoring=false;state.apiError='';state.patient={...primaryPatient};
-        state.patientDirectory=[];state.accessRequests=[];state.symptoms=[];state.meals=[];state.messages=[];page='Dashboard';render();return;
+        state.patientDirectory=[];state.accessRequests=[];state.symptoms=[];state.meals=[];state.messages=[];state.followups=[];state.surveillancePlans=[];state.medicationRecords=[];state.notesFromApi=[];state.careEvents=[];state.timelineFromApi=null;state.nutritionSummary=null;state.latestProfile=null;state.latestStudy=null;page='Dashboard';render();return;
       }
       if(target.dataset.action==='uncertain-meal'){
         const form=target.closest('form'),values=new FormData(form),body={confirmed:false,description:String(values.get('description')||''),food_items:String(values.get('food_items')||'').split(',').map(x=>x.trim()).filter(Boolean),food_context_tags:values.getAll('food_context_tags')};
@@ -555,6 +580,31 @@ function installBackendHandlers() {
     if(!nav||!state.backendConnected)return;
     try{if(['Dashboard','Patients','Access Requests','Care Team Access'].includes(nav.dataset.go))await refreshBackendData();}
     catch(error){state.apiError=error.message;render();}
+  });
+  document.addEventListener('click',event=>{
+    const filter=event.target.closest('[data-feed-filter]');
+    if(!filter)return;
+    const group=filter.dataset.feedName,category=filter.dataset.feedFilter,controls=filter.closest('[data-feed-controls]');
+    controls.querySelectorAll('[data-feed-filter]').forEach(button=>{
+      const active=button===filter;
+      button.classList.toggle('active',active);
+      button.setAttribute('aria-pressed',String(active));
+    });
+    document.querySelectorAll('[data-feed-item]').forEach(item=>{
+      if(item.dataset.feedItem===group)item.hidden=category!=='all'&&item.dataset.feedCategory!==category;
+    });
+  });
+  document.addEventListener('change',event=>{
+    const range=event.target.closest('[data-nutrition-range]');
+    if(range){
+      const dayLimit=range.value==='all'?Infinity:Number(range.value);
+      document.querySelectorAll('.nutrition-day-card[data-nutrition-day]').forEach(day=>{
+        day.hidden=Number(day.dataset.nutritionDay)>=dayLimit;
+      });
+      return;
+    }
+    const mealDate=event.target.closest('[data-meal-date-filter]');
+    if(mealDate)document.querySelectorAll('.meal-day[data-meal-day]').forEach(day=>{day.hidden=Boolean(mealDate.value)&&day.dataset.mealDay!==mealDate.value;});
   });
 }
 function render() { const root=document.getElementById('app'); if(state.sessionRestoring){root.innerHTML='<main class="login"><section class="login-card"><b>Connecting to CystGuardâ€¦</b><p class="muted">Restoring your secure session.</p></section></main>';return;}root.innerHTML=state.role?shell(state.backendConnected?backendPageContent():pageContent()):authPage();if(!state.role&&state.apiError){const error=root.querySelector('#auth-error');if(error){error.textContent=state.apiError;error.classList.remove('hidden');}} }
