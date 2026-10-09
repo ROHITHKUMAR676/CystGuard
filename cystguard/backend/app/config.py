@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     cystx_checkpoint_path: Path | None = None
     cystx_source_path: Path | None = None
     cystx_model_version: str = "cystx-baseline-v1"
+    cystx_diagnostics_enabled: bool = False
     foodcnn_checkpoint_path: Path = PROJECT_ROOT / "backend" / "vendor" / "FoodCNN" / "best_finetuned_combined_model.pth"
     foodcnn_model_version: str = "FoodCNN@2c944166f988acff4374d131b8b1fe535a64abf6"
     max_meal_upload_size_mb: int = 12

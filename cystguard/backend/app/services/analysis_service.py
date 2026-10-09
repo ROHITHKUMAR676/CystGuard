@@ -1,5 +1,6 @@
 import gzip
 from datetime import date
+import logging
 from pathlib import Path
 import shutil
 import tempfile
@@ -24,6 +25,7 @@ from app.storage.service import StorageBackend, StoredObject
 
 _NIFTI1_MAGIC = b"n+1\x00"
 _NIFTI2_MAGIC = b"n+2\x00\r\n\x1a\n"
+logger = logging.getLogger(__name__)
 
 
 def validate_nifti_upload(upload: UploadFile, max_size_bytes: int) -> tuple[str, MRIFileFormat]:
@@ -155,11 +157,24 @@ def analyze_study(
             raise ModelInferenceError("Cyst-X returned an invalid result.")
     except ModelConfigurationError as exc:
         failure_message = str(exc)
+        if settings.cystx_diagnostics_enabled:
+            logger.exception(
+                "Cyst-X setup failed; model_executed=false fallback_used=false."
+            )
     except FileNotFoundError:
         quality_status = InputQualityStatus.NOT_EVALUATED
         failure_message = "Stored MRI file is unavailable; no prediction was produced."
+        if settings.cystx_diagnostics_enabled:
+            logger.exception(
+                "Cyst-X input file was unavailable; model_executed=false fallback_used=false."
+            )
     except Exception:
         failure_message = "Cyst-X inference failed; no prediction was produced."
+        if settings.cystx_diagnostics_enabled:
+            logger.exception(
+                "Cyst-X inference failed; model_executed status depends on the failing stage; "
+                "fallback_used=false."
+            )
     finally:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)

@@ -35,8 +35,8 @@ class MLService(Protocol):
 _IMPORT_LOCK = RLock()
 
 
-@lru_cache(maxsize=2)
-def _load_adapter(checkpoint_path: str, source_path: str):
+@lru_cache(maxsize=4)
+def _load_adapter(checkpoint_path: str, source_path: str, diagnostics_enabled: bool = False):
     checkpoint = Path(checkpoint_path).expanduser().resolve()
     source = Path(source_path).expanduser().resolve()
     if not checkpoint.is_file():
@@ -66,7 +66,10 @@ def _load_adapter(checkpoint_path: str, source_path: str):
             ) from exc
 
     try:
-        return adapter_type(checkpoint_path=str(checkpoint))
+        return adapter_type(
+            checkpoint_path=str(checkpoint),
+            diagnostics_enabled=diagnostics_enabled,
+        )
     except (FileNotFoundError, ImportError, OSError, RuntimeError, ValueError) as exc:
         raise ModelConfigurationError("Cyst-X could not load the configured checkpoint.") from exc
 
@@ -84,7 +87,11 @@ class CystXMLService:
             raise ModelConfigurationError("CYSTX_CHECKPOINT_PATH is not configured.")
         if source is None:
             raise ModelConfigurationError("CYSTX_SOURCE_PATH is not configured.")
-        adapter = _load_adapter(str(checkpoint), str(source))
+        adapter = _load_adapter(
+            str(checkpoint),
+            str(source),
+            diagnostics_enabled=self.settings.cystx_diagnostics_enabled,
+        )
         result = adapter.analyze(str(mri_path))
         try:
             raw_score = float(result["score"])

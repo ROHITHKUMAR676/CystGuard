@@ -35,7 +35,17 @@ export function LongitudinalTimeline(props: { studies: MRIStudySummary[]; orderi
       </svg></div><p class="muted longitudinal-caption">Raw model score (0–1), not a probability.</p>`
     : '<div class="empty">No model scores are recorded for these studies.</div>';
 
-  const records = entries.map(({ study, result, index }) => `<article class="timeline-entry"><span class="timeline-dot"></span><div><small>MRI ${index + 1} · ${escapeHtml(displayDate(study.study_date || study.uploaded_at))}${study.study_date ? '' : ' · upload date'}</small><h3>${escapeHtml(result?.risk_class || 'Assessment unavailable')}</h3><p>${result?.raw_score == null ? 'Model score not recorded' : `Raw model score ${Number(result.raw_score).toFixed(3)} · not a probability`}</p>${(study.measurements || []).map((measurement) => `<p>${escapeHtml(String(measurement.feature || 'Measurement'))} · ${measurement.value == null ? escapeHtml(String(measurement.finding_status || 'Unknown')) : `${escapeHtml(String(measurement.value))} ${escapeHtml(String(measurement.unit || ''))}`} · ${escapeHtml(String(measurement.source || 'Source not recorded'))}</p>`).join('')}</div></article>`).join('');
+  const records = entries.map(({ study, result, index }) => {
+    const profile = result?.risk_class === 'HIGH_RISK'
+      ? 'Higher risk profile'
+      : result?.risk_class === 'NO_LOW_RISK'
+        ? 'No / low risk profile'
+        : 'Assessment unavailable';
+    const measurements = (study.measurements || []).map((measurement) =>
+      `<li><b>${escapeHtml(String(measurement.feature || 'Measurement'))}</b><span>${measurement.value == null ? escapeHtml(String(measurement.finding_status || 'Unknown')) : `${escapeHtml(String(measurement.value))} ${escapeHtml(String(measurement.unit || ''))}`}</span><small>${escapeHtml(String(measurement.source || 'Source not recorded'))}</small></li>`,
+    ).join('');
+    return `<article class="longitudinal-record"><div class="longitudinal-record-heading"><div><span class="eyebrow">MRI ${index + 1}</span><p class="longitudinal-record-date">${escapeHtml(displayDate(study.study_date || study.uploaded_at))}${study.study_date ? '' : ' · upload date'}</p></div><span class="longitudinal-profile">${profile}</span></div><div class="longitudinal-record-score"><span>Raw model score</span><strong>${result?.raw_score == null ? 'Not recorded' : Number(result.raw_score).toFixed(3)}</strong><small>Not a probability</small></div>${measurements ? `<div class="longitudinal-measurements"><h4>Recorded measurements</h4><ul>${measurements}</ul></div>` : ''}</article>`;
+  }).join('');
 
-  return `${chart}<div class="timeline">${records}</div>${props.orderingComplete === false ? '<p class="muted">Some study dates are missing; upload dates are used where available.</p>' : ''}`;
+  return `${chart}<div class="longitudinal-records">${records}</div>${props.orderingComplete === false ? '<p class="muted">Some study dates are missing; upload dates are used where available.</p>' : ''}`;
 }

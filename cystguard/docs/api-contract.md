@@ -33,6 +33,10 @@ All endpoints use the `/api/v1` prefix. MRI routes require a bearer token for a 
 
 Unsupported formats return HTTP 415; empty, malformed NIfTI, or missing filenames return HTTP 4xx; over-limit files return HTTP 413. `MAX_MRI_UPLOAD_SIZE_MB` configures the size limit (default 512). Uploads validate extension, size, and NIfTI header/magic. This is technical input validation only and does not assess clinical MRI quality. Uploaded file data is stored outside the repository; storage keys and filesystem paths are never returned.
 
+The official Cyst-X centralized binary classifier is trained and tested on cropped 3D pancreatic/IPMN ROIs, with separate T1 and T2 models. CystGuard uses the T1 model and does not perform pancreas segmentation, ROI cropping, modality verification, or orientation correction. A NIfTI full-volume upload can pass technical checks without being a valid classifier input. `ACCEPTABLE` does not assert that modality or ROI requirements were met.
+
+Set `CYSTX_DIAGNOSTICS_ENABLED=true` and restart the backend to opt into structured Cyst-X diagnostics in protected backend logs. Diagnostics include NIfTI/model-input statistics, checkpoint fingerprint and load-key results, model/device state, raw logit, score, threshold, and class mapping. They do not include original filenames, patient/study identifiers, credentials, or image voxel contents, and are not added to API responses or the dashboard. Disable the setting and restart the backend when diagnostics are no longer needed.
+
 ### MRI analysis response
 
 The response contains `mri_study` (`id: string`, `original_filename: string`, `modality: string`, `file_format: NIFTI | NIFTI_GZ`, `uploaded_at: datetime`, `status: UPLOADED | PROCESSING | ANALYZED | FAILED`, `error_message: string | null`) and `assessment` (`id: string`, `mri_study_id: string`, `model_id: string`, `model_version: string`, `architecture: string | null`, `risk_class: string | null`, `raw_score: number | null`, `threshold: number | null`, `prediction_status: SUCCESS | FAILED`, `input_quality_status: ACCEPTABLE | NOT_EVALUATED`, `fallback_used: boolean`, `error_message: string | null`, `created_at: datetime`).

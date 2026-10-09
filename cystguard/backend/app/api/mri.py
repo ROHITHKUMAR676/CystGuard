@@ -38,7 +38,10 @@ def _require_doctor(user: User) -> None:
 
 @router.post("/studies", response_model=MRIAnalysisResponse, status_code=status.HTTP_201_CREATED)
 def upload_mri(
-    upload: Annotated[UploadFile, File(description="T1-weighted NIfTI MRI file (.nii or .nii.gz)")],
+    upload: Annotated[
+        UploadFile,
+        File(description="T1-weighted cropped pancreatic/IPMN ROI NIfTI file (.nii or .nii.gz)"),
+    ],
     db: DbSession,
     current_user: CurrentUser,
     storage: Annotated[StorageBackend, Depends(get_storage)],

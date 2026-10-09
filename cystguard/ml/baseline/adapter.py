@@ -23,12 +23,14 @@ class CystXAdapter:
         self,
         checkpoint_path: str,
         device: str | None = None,
+        diagnostics_enabled: bool = False,
     ):
         self.checkpoint_path = Path(checkpoint_path)
 
         self.engine = CystXInference(
             checkpoint_path=str(self.checkpoint_path),
             device=device,
+            diagnostics_enabled=diagnostics_enabled,
         )
 
     def analyze(self, mri_path: str) -> dict[str, Any]:
